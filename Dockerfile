@@ -6,7 +6,7 @@ WORKDIR /app
 COPY . /app
 RUN make service
 
-FROM docker.io/alpine:3.17.2
+FROM docker.io/alpine:3.20
 RUN apk --no-cache add ca-certificates ffmpeg
 COPY --from=builder /app/cmd/gif/gif /usr/bin/gif
 CMD ["gif"]
