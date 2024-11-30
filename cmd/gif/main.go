@@ -24,6 +24,9 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	
+
 }
 
 func VideoToGIF(inputPath, outputPath string, startTime, endTime float64, fps int) error {
