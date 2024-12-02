@@ -7,8 +7,15 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
+)
 
-	ffmpeg "github.com/u2takey/ffmpeg-go"
+var (
+	endpoint   = "br-se1.magaluobjects.com"
+	accessKey  = os.Getenv("S3_ACCESS_KEY_ID")
+	secretKey  = os.Getenv("S3_SECRET_KEY")
+	useSSL     = true
+	bucketName = "aulao-cloud"
 )
 
 func main() {
@@ -27,21 +34,6 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-
-}
-
-func VideoToGIF(inputPath, outputPath string, startTime, endTime float64, fps int) error {
-	duration := endTime - startTime
-
-	return ffmpeg.Input(inputPath, ffmpeg.KwArgs{
-		"ss": fmt.Sprintf("%f", startTime),
-	}).
-		Output(outputPath, ffmpeg.KwArgs{
-			"vf": fmt.Sprintf("fps=%d,scale=320:-1:flags=lanczos", fps),
-			"t":  fmt.Sprintf("%f", duration),
-		}).
-		OverWriteOutput().
-		Run()
 }
 
 type GIFRequest struct {
@@ -56,7 +48,7 @@ func ConvertToGIF(w http.ResponseWriter, r *http.Request) {
 	endTime := r.URL.Query().Get("end_time")
 	fps := r.URL.Query().Get("fps")
 
-	outputPathVideo, err := uploadfile(r)
+	outputPathVideo, err := getFileFromReq(r)
 	if err != nil {
 		fmt.Printf("error uploading file: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -92,11 +84,24 @@ func ConvertToGIF(w http.ResponseWriter, r *http.Request) {
 
 	VideoToGIF(outputPathVideo, path, float64(gifReq.StartTime), float64(gifReq.EndTime), gifReq.FPS)
 
-	w.Write([]byte("Convert to GIF"))
+	path = path[2:]
+	// fazer upload do arquivo que esta em 'path' pra obj store da magalu
+	err = uploadFile(endpoint, accessKey, secretKey, bucketName, path, path, useSSL)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// retornar a url assinada
+	signedUrl, err := generatePresignedURL(endpoint, accessKey, secretKey, bucketName, path, 30*time.Minute, useSSL)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	w.Write([]byte(signedUrl + "\n"))
 	w.WriteHeader(http.StatusOK)
 }
 
-func uploadfile(r *http.Request) (string, error) {
+func getFileFromReq(r *http.Request) (string, error) {
 	r.ParseMultipartForm(32 << 20)
 	file, handler, err := r.FormFile("file")
 	if err != nil {
@@ -123,5 +128,6 @@ func uploadfile(r *http.Request) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return tmpFile.Name(), nil
 }
