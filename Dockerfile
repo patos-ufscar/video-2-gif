@@ -1,6 +1,6 @@
-ARG GO_VERSION
+# ARG GO_VERSION
 
-FROM docker.io/golang:${GO_VERSION}-alpine3.20 as builder
+FROM docker.io/golang:1.23.3-alpine3.20 as builder
 RUN apk --no-cache add make bash
 WORKDIR /app
 COPY . /app

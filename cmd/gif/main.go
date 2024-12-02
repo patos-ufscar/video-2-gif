@@ -25,13 +25,15 @@ func main() {
 	// }
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /convert", ConvertToGIF)
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("HTTP/1.1 200 OK"))
+	})
 
 	fmt.Println("Server is running on port 8080")
 	err := http.ListenAndServe(":8080", mux)
 	if err != nil {
 		fmt.Println(err)
 	}
-
 }
 
 type GIFRequest struct {
