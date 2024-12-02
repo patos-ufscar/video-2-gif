@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
+	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 // Função para baixar arquivos do MinIO
-func downloadFile(endpoint, accessKey, secretKey, bucketName, objectName, destination string, useSSL bool) error {
+func DownloadFile(endpoint, accessKey, secretKey, bucketName, objectName, destination string, useSSL bool) error {
 	// Configura o cliente MinIO
 	client, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
@@ -50,6 +50,9 @@ func uploadFile(endpoint, accessKey, secretKey, bucketName, objectName, filePath
 	}
 
 	// Faz o upload do arquivo
+	fmt.Printf("bucketName: %v\n", bucketName)
+	fmt.Printf("objectName: %v\n", objectName)
+	fmt.Printf("filePath: %v\n", filePath)
 	_, err = client.FPutObject(context.Background(), bucketName, objectName, filePath, minio.PutObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("falha ao fazer upload: %v", err)
@@ -59,36 +62,51 @@ func uploadFile(endpoint, accessKey, secretKey, bucketName, objectName, filePath
 	return nil
 }
 
-func main() {
-	// Configurações do MinIO
-	endpoint := "br-se1.magaluobjects.com"
-	accessKey := "a07868a3-a9db-454c-8064-3c977546d8de"
-	secretKey := "38cd2fc9-102a-4b45-abc8-55052e714a8f"
-	useSSL := true
-
-	// Exemplo de download
-	bucketName := "aulao-cloud"
-	objectName := "panda-vermelho.png"
-	destination := "./tmp/panda-vermelho.png"
-
-	if err := downloadFile(endpoint, accessKey, secretKey, bucketName, objectName, destination, useSSL); err != nil {
-		log.Fatalf("Erro ao baixar arquivo: %v\n", err)
+func generatePresignedURL(endpoint, accessKey, secretKey, bucketName, objectName string, expiry time.Duration, useSSL bool) (string, error) {
+	// Configura o cliente MinIO
+	client, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+		Secure: useSSL,
+	})
+	if err != nil {
+		return "", fmt.Errorf("falha ao criar cliente MinIO: %v", err)
 	}
 
-	// Exemplo de upload
-	// filePath := "panda-vermelho.png"
-	// uploadObjectName := "panda-vermelho.png"
+	// Gera a URL assinada
+	// reqParams := make(map[string]string)
+	// url, err := client.PresignedGetObject(context.Background(), bucketName, objectName, expiry, nil)
+	url, err := client.PresignedGetObject(context.Background(), bucketName, objectName, time.Hour*24, nil)
+	if err != nil {
+		return "", fmt.Errorf("falha ao gerar URL assinada: %v", err)
+	}
 
-	// if err := uploadFile(endpoint, accessKey, secretKey, bucketName, uploadObjectName, filePath, useSSL); err != nil {
-	// 	log.Fatalf("Erro ao enviar arquivo: %v\n", err)
-	// }
+	return url.String(), nil
 }
 
+// func main() {
+// 	// Configurações do MinIO
+// 	endpoint := "br-se1.magaluobjects.com"
+// 	accessKey := "a07868a3-a9db-454c-8064-3c977546d8de"
+// 	secretKey := "38cd2fc9-102a-4b45-abc8-55052e714a8f"
+// 	useSSL := true
 
+// 	// Exemplo de download
+// 	bucketName := "aulao-cloud"
+// 	objectName := "panda-vermelho.png"
+// 	destination := "./tmp/panda-vermelho.png"
 
+// 	if err := downloadFile(endpoint, accessKey, secretKey, bucketName, objectName, destination, useSSL); err != nil {
+// 		log.Fatalf("Erro ao baixar arquivo: %v\n", err)
+// 	}
 
+// 	// Exemplo de upload
+// 	// filePath := "panda-vermelho.png"
+// 	// uploadObjectName := "panda-vermelho.png"
 
-
+// 	// if err := uploadFile(endpoint, accessKey, secretKey, bucketName, uploadObjectName, filePath, useSSL); err != nil {
+// 	// 	log.Fatalf("Erro ao enviar arquivo: %v\n", err)
+// 	// }
+// }
 
 /*
 package main
@@ -213,7 +231,7 @@ func main(){
 // 		fmt.Println(err)
 // 	}
 // 	v := rc.Attrs.Size
-// 	fmt.Println(v)	
+// 	fmt.Println(v)
 
 // }
 */
