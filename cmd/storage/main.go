@@ -1,6 +1,99 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
+)
+
+// Função para baixar arquivos do MinIO
+func downloadFile(endpoint, accessKey, secretKey, bucketName, objectName, destination string, useSSL bool) error {
+	// Configura o cliente MinIO
+	client, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+		Secure: useSSL,
+	})
+	if err != nil {
+		return fmt.Errorf("falha ao criar cliente MinIO: %v", err)
+	}
+
+	// Abre um arquivo local para escrever o conteúdo
+	file, err := os.Create(destination)
+	if err != nil {
+		return fmt.Errorf("falha ao criar arquivo local: %v", err)
+	}
+	defer file.Close()
+
+	// Baixa o objeto
+	err = client.FGetObject(context.Background(), bucketName, objectName, destination, minio.GetObjectOptions{})
+	if err != nil {
+		return fmt.Errorf("falha ao baixar objeto: %v", err)
+	}
+
+	fmt.Printf("Arquivo %s baixado em %s\n", objectName, destination)
+	return nil
+}
+
+// Função para enviar arquivos ao MinIO
+func uploadFile(endpoint, accessKey, secretKey, bucketName, objectName, filePath string, useSSL bool) error {
+	// Configura o cliente MinIO
+	client, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+		Secure: useSSL,
+	})
+	if err != nil {
+		return fmt.Errorf("falha ao criar cliente MinIO: %v", err)
+	}
+
+	// Faz o upload do arquivo
+	_, err = client.FPutObject(context.Background(), bucketName, objectName, filePath, minio.PutObjectOptions{})
+	if err != nil {
+		return fmt.Errorf("falha ao fazer upload: %v", err)
+	}
+
+	fmt.Printf("Arquivo %s enviado para o bucket %s como %s\n", filePath, bucketName, objectName)
+	return nil
+}
+
+func main() {
+	// Configurações do MinIO
+	endpoint := "br-se1.magaluobjects.com"
+	accessKey := "a07868a3-a9db-454c-8064-3c977546d8de"
+	secretKey := "38cd2fc9-102a-4b45-abc8-55052e714a8f"
+	useSSL := true
+
+	// Exemplo de download
+	bucketName := "aulao-cloud"
+	objectName := "panda-vermelho.png"
+	destination := "./tmp/panda-vermelho.png"
+
+	if err := downloadFile(endpoint, accessKey, secretKey, bucketName, objectName, destination, useSSL); err != nil {
+		log.Fatalf("Erro ao baixar arquivo: %v\n", err)
+	}
+
+	// Exemplo de upload
+	// filePath := "panda-vermelho.png"
+	// uploadObjectName := "panda-vermelho.png"
+
+	// if err := uploadFile(endpoint, accessKey, secretKey, bucketName, uploadObjectName, filePath, useSSL); err != nil {
+	// 	log.Fatalf("Erro ao enviar arquivo: %v\n", err)
+	// }
+}
+
+
+
+
+
+
+
+/*
+package main
+
+import (
 	"fmt"
 	"io"
 	"log"
@@ -123,4 +216,4 @@ func main(){
 // 	fmt.Println(v)	
 
 // }
-
+*/
